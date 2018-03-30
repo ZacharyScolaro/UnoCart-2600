@@ -20,6 +20,7 @@ SOURCES = \
 	src/system_stm32f4xx.c \
 	Libraries/tm_stm32f4_delay/tm_stm32f4_delay.c \
 	Libraries/STM32F4xx_StdPeriph_Driver/src/stm32f4xx_rcc.c \
+	Libraries/STM32F4xx_StdPeriph_Driver/src/stm32f4xx_tim.c \
 	Libraries/STM32F4xx_StdPeriph_Driver/src/stm32f4xx_gpio.c \
 	Libraries/STM32F4xx_StdPeriph_Driver/src/stm32f4xx_spi.c \
 	Libraries/tm_stm32f4_spi/tm_stm32f4_spi.c \

@@ -7,6 +7,8 @@
 #include "supercharger_bios.h"
 
 #include "tm_stm32f4_fatfs.h"
+#include "stm32f4xx_tim.h"
+#include "stm32f4xx_rcc.h"
 
 typedef struct __attribute__((packed)) {
 	uint8_t entry_lo;
@@ -109,6 +111,18 @@ static void load_multiload(uint8_t *ram, uint8_t *rom, uint8_t physical_index, c
 	rom[0x7f3] = header->entry_hi;
 }
 
+static void setup_timer() {
+	TIM_TimeBaseInitTypeDef SetupTimer;
+
+	RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM3, ENABLE);
+	SetupTimer.TIM_Prescaler = 0x0000;
+	SetupTimer.TIM_CounterMode = TIM_CounterMode_Up;
+	SetupTimer.TIM_Period = 0xFFFF;
+	SetupTimer.TIM_ClockDivision = TIM_CKD_DIV1;
+	TIM_TimeBaseInit(TIM3, &SetupTimer);
+	TIM_Cmd(TIM3, ENABLE);
+}
+
 void emulate_supercharger_cartridge(const char* cartridge_path, unsigned int image_size, uint8_t* buffer, int tv_mode) {
 	uint8_t *ram = buffer;
 	uint8_t *rom = ram + 0x1800;
@@ -128,6 +142,9 @@ void emulate_supercharger_cartridge(const char* cartridge_path, unsigned int ima
 
 	setup_rom(rom, tv_mode);
 	setup_multiload_map(multiload_map, multiload_count, cartridge_path);
+
+	setup_timer();
+	TIM3->CNT = 500;
 
 	if (!reboot_into_cartridge()) return;
 
@@ -216,7 +233,12 @@ void emulate_supercharger_cartridge(const char* cartridge_path, unsigned int ima
 			if (transition_count < 6) transition_count++;
 
 			last_address = addr;
+
+			while (TIM3->CNT < 50);
+			TIM3->CNT = 0;
+
 			while (ADDR_IN == addr);
+
 			SET_DATA_MODE_IN;
 	}
 
