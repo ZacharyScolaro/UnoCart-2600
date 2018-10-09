@@ -1196,7 +1196,7 @@ void emulate_DPC_cartridge()
 	SysTick_Config(SystemCoreClock / 21000);	// 21KHz
 	__disable_irq();	// Disable interrupts
 
-	unsigned char soundAmplitude = 0;
+	int soundAmplitudeIndex = 0;
 	unsigned char soundAmplitudes[8] = {0x00, 0x04, 0x05, 0x09, 0x06, 0x0a, 0x0b, 0x0f};
 
 	uint16_t addr, addr_prev = 0, data = 0, data_prev = 0;
@@ -1204,7 +1204,7 @@ void emulate_DPC_cartridge()
 
 	unsigned char DpcTops[8], DpcBottoms[8], DpcFlags[8];
 	uint16_t DpcCounters[8];
-	int DpcMusicModes[3], DpcMusicFlags[3];
+	int DpcMusicModes[3];
 
 	// Initialise the DPC's random number generator register (must be non-zero)
 	int DpcRandom = 1;
@@ -1214,11 +1214,8 @@ void emulate_DPC_cartridge()
 		DpcTops[i] = DpcBottoms[i] = DpcCounters[i] = DpcFlags[i] = 0;
 
 	DpcMusicModes[0] = DpcMusicModes[1] = DpcMusicModes[2] = 0;
-	DpcMusicFlags[0] = DpcMusicFlags[1] = DpcMusicFlags[2] = 0;
-
 
 	uint32_t lastSysTick = SysTick->VAL;
-	uint32_t DpcClocks = 0;
 
 	while (1)
 	{
@@ -1253,7 +1250,7 @@ void emulate_DPC_cartridge()
 						}
 						else
 						{	// sound
-							result = soundAmplitude;
+							result = soundAmplitudes[soundAmplitudeIndex];
 						}
 						break;
 					}
@@ -1351,24 +1348,51 @@ void emulate_DPC_cartridge()
 				// should the DPC clock be incremented?
 				uint32_t sysTick = SysTick->VAL;
 				if (sysTick > lastSysTick)
-				{	// the 21KHz clock has wrapped, so we increase the DPC clock
-					DpcClocks++;
-					// update the music flags here, since there isn't enough time when the music register
-					// is being read.
-					DpcMusicFlags[0] = (DpcClocks % (DpcTops[5] + 1))
-							> DpcBottoms[5] ? 1 : 0;
-					DpcMusicFlags[1] = (DpcClocks % (DpcTops[6] + 1))
-							> DpcBottoms[6] ? 2 : 0;
-					DpcMusicFlags[2] = (DpcClocks % (DpcTops[7] + 1))
-							> DpcBottoms[7] ? 4 : 0;
-				}
-				else
 				{
-					// sound pre calculated here because it's too much to do when it's requested
-					unsigned char i = (DpcMusicModes[0] & DpcMusicFlags[0]);
-					i |=  (DpcMusicModes[1] & DpcMusicFlags[1]);
-					i |=  (DpcMusicModes[2] & DpcMusicFlags[2]);
-					soundAmplitude = soundAmplitudes[i];
+					// the 21KHz clock has wrapped, so we update audio
+					// unroll loop because timing is super tight here
+					// 5
+					 if (DpcCounters[5] == 0)
+					 {
+						 DpcCounters[5] = DpcTops[5];
+						 soundAmplitudeIndex |= 1;
+					 }
+					 else
+					 {
+						 DpcCounters[5] -= 1;
+						 if (DpcCounters[5] == DpcBottoms[5])
+						 {
+							 soundAmplitudeIndex &= ~1;
+						 }
+					 }
+					// 6
+					 if (DpcCounters[6] == 0)
+					 {
+						 DpcCounters[6] = DpcTops[6];
+						 soundAmplitudeIndex |= 2;
+					 }
+					 else
+					 {
+						 DpcCounters[6] -= 1;
+						 if (DpcCounters[6] == DpcBottoms[6])
+						 {
+							 soundAmplitudeIndex &= ~2;
+						 }
+					 }
+					// 7
+					 if (DpcCounters[7] == 0)
+					 {
+						 DpcCounters[7] = DpcTops[7];
+						 soundAmplitudeIndex |= 4;
+					 }
+					 else
+					 {
+						 DpcCounters[7] -= 1;
+						 if (DpcCounters[7] == DpcBottoms[7])
+						 {
+							 soundAmplitudeIndex &= ~4;
+						 }
+					 }
 				}
 				lastSysTick = sysTick;
 			}
