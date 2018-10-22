@@ -60,7 +60,7 @@ CART_CMD_SEL_ITEM_n = 	$1E00	// out
 CART_CMD_ROOT_DIR = 	$1EF0	// out
 CART_CMD_START_CART = 	$1EFF	// out
 
-WaitCart = $84 ; routine to run from 2600 RAM while cart busy copied here
+WaitCart = $81 ; routine to run from 2600 RAM while cart busy copied here
 ITEMS_PER_SCREEN = 7
 ;------------------------------------------------------------------
 ; non-volatile memory $80-$83
@@ -478,6 +478,8 @@ frame_loop
 ; Now we need 37 lines of VBLANK...	
 	ldx #37
 lvblank sta wsync
+	nop
+	nop
 	dex
 	bne lvblank
 ; Re-enable output (disable VBLANK)	
@@ -488,12 +490,16 @@ lvblank sta wsync
 	ldx #32	; 32 scanlines
 scan1
 	sta wsync
+	nop
+	nop
 	dex
 	bne scan1
 
 	ldy #0
 scan2
 	sta wsync
+	nop
+	nop
 	tya
 	lsr
 	lsr
@@ -507,6 +513,8 @@ scan2
 	ldx #136 ; 136 scanlines
 scan3
 	sta wsync
+	nop
+	nop
 	dex
 	bne scan3
 
@@ -516,6 +524,8 @@ scan3
 ; 30 lines of overscan to complete the frame
 	ldx #30
 lvover	sta wsync
+	nop
+	nop
 	dex
 	bne lvover
 
@@ -541,6 +551,7 @@ reboot
 	lda CART_CMD_START_CART
 	sta wsync
 	sta wsync
+	nop
 	jmp ($fffc)
 SDLogo	.byte $EE, $89, $E9, $29, $EE, $0
 	.endp
