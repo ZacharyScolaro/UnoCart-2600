@@ -38,6 +38,7 @@
 #include "cartridge_supercharger.h"
 #include "cartridge_3f.h"
 #include "cartridge_3e.h"
+#include "cartridge_bf.h"
 
 /*************************************************************************
  * Cartridge Definitions
@@ -75,6 +76,8 @@ int tv_mode;
 #define CART_TYPE_E7	20	// 16k+ram
 #define CART_TYPE_DPC	21	// 8k+DPC(2k)
 #define CART_TYPE_AR	22  // Arcadia Supercharger (variable size)
+#define CART_TYPE_BF	23  // BF
+#define CART_TYPE_BFSC	24  // BFSC
 
 typedef struct {
 	const char *ext;
@@ -107,6 +110,8 @@ EXT_TO_CART_TYPE_MAP ext_to_cart_type_map[] = {
 	{"E7", CART_TYPE_E7},
 	{"DPC", CART_TYPE_DPC},
 	{"AR", CART_TYPE_AR},
+	{"BF", CART_TYPE_BF},
+	{"BFSC", CART_TYPE_BFSC},
 	{0,0}
 };
 
@@ -274,6 +279,20 @@ int isProbablyE7(int size, unsigned char *bytes)
 		if(searchForBytes(bytes, size, signature[i], 3, 1))
 			return 1;
 	return 0;
+}
+
+int isProbablyBF(int size, unsigned char *bytes)
+{
+	if (size != 256 * 1024) return 0;
+
+	return !memcmp(bytes + 0x0ff8, "BFBF", 4);
+}
+
+int isProbablyBFSC(int size, unsigned char *bytes)
+{
+	if (size != 256 * 1024) return 0;
+
+	return !memcmp(bytes + 0x0ff8, "BFSC", 4);
 }
 
 /*************************************************************************
@@ -496,6 +515,13 @@ int identify_cartridge(char *filename)
 		}
 		else
 			cart_type = CART_TYPE_F0;
+	}
+	else if (image_size == 256 * 1024)
+	{
+		if (isProbablyBF(bytes_read, buffer))
+			cart_type = CART_TYPE_BF;
+		else if (isProbablyBFSC(bytes_read, buffer))
+			cart_type = CART_TYPE_BFSC;
 	}
 
 	close:
@@ -1411,9 +1437,12 @@ void emulate_cartridge(int cart_type)
 		emulate_E7_cartridge();
 	else if (cart_type == CART_TYPE_DPC)
 		emulate_DPC_cartridge();
-	else if (cart_type == CART_TYPE_AR) {
+	else if (cart_type == CART_TYPE_AR)
 		emulate_supercharger_cartridge(cartridge_image_path, cart_size_bytes, buffer, tv_mode);
-	}
+	else if (cart_type == CART_TYPE_BF)
+		emulate_bf_cartridge(cartridge_image_path, cart_size_bytes, buffer);
+	else if (cart_type == CART_TYPE_BFSC)
+		emulate_bfsc_cartridge(cartridge_image_path, cart_size_bytes, buffer);
 }
 
 void convertFilenameForCart(unsigned char *dst, char *src)
