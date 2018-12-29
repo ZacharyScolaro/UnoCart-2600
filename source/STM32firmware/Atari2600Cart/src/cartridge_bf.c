@@ -9,7 +9,7 @@
 #define BUFFER_SIZE_KB 96
 #define CCM_SIZE_KB 64
 
-#define RAM_BANKS (BUFFER_SIZE_KB / 4) - 1
+#define RAM_BANKS ((BUFFER_SIZE_KB / 4) - 1)
 #define CCM_BANKS (CCM_SIZE_KB / 4)
 #define FLASH_BANKS (64 - RAM_BANKS - CCM_BANKS)
 
@@ -21,7 +21,10 @@
 #define CCM_IMAGE_OFFSET (RAM_BANKS * 4096)
 
 #define FLASH_IMAGE_SIZE (FLASH_BANKS * 4096)
-#define FLASH_IMAGE_OFFSET (RAM_BANKS + CCM_BANKS) * 4096
+#define FLASH_IMAGE_OFFSET ((RAM_BANKS + CCM_BANKS) * 4096)
+
+#define STARTUP_BANK_BF 1
+#define STARTUP_BANK_BFSC 15
 
 typedef struct {
     uint8_t* banks[64];
@@ -30,7 +33,7 @@ typedef struct {
 static bool setup_cartridge_image(const char* filename, uint32_t image_size, uint8_t* buffer, cartridge_layout* layout) {
     if (image_size != 256*1024) return false;
 
-    if (FLASH_IMAGE_SIZE < available_flash()) return false;
+    if (FLASH_IMAGE_SIZE > available_flash()) return false;
 
     flash_context ctx;
     if (!prepare_flash(FLASH_IMAGE_SIZE, &ctx)) return false;
@@ -78,16 +81,16 @@ void emulate_bfsc_cartridge(const char* filename, uint32_t image_size, uint8_t* 
     uint8_t *ram_base = buffer + AVAILABLE_RAM_BASE;
 
     cartridge_layout* layout = (void*)ram_base;
-    ram_base += sizeof(layout);
+    ram_base += sizeof(cartridge_layout);
 
     uint8_t* ram = ram_base;
 
     if (!setup_cartridge_image(filename, image_size, buffer, layout)) return;
 
-    uint8_t *bank = layout->banks[1];
+    uint8_t *bank = layout->banks[STARTUP_BANK_BFSC];
 
     if (!reboot_into_cartridge()) return;
-	__disable_irq();
+    __disable_irq();
 
     uint16_t addr, addr_prev = 0, addr_prev2 = 0, data = 0, data_prev = 0;
 
@@ -101,17 +104,17 @@ void emulate_bfsc_cartridge(const char* filename, uint32_t image_size, uint8_t* 
 
         if (!(addr & 0x1000)) continue;
 
-        addr &= 0x0fff;
+        uint16_t address = addr & 0x0fff;
 
-        if (addr < 0x80) {
+        if (address < 0x80) {
             while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
 			data = data_prev>>8;
 
-            ram[addr] = data;
+            ram[address] = data;
         } else {
-            if (addr >= 0x0f80 && addr <= 0x0fbf) bank = layout->banks[addr - 0x0f80];
+            if (address >= 0x0f80 && address <= 0x0fbf) bank = layout->banks[address - 0x0f80];
 
-            data = (addr < 0x0100) ? ram[addr & 0x7f] : bank[addr];
+            data = (address < 0x0100) ? ram[address & 0x7f] : bank[address];
 
             DATA_OUT = ((uint16_t)data)<<8;
 			SET_DATA_MODE_OUT
@@ -128,10 +131,10 @@ void emulate_bf_cartridge(const char* filename, uint32_t image_size, uint8_t* bu
 
     if (!setup_cartridge_image(filename, image_size, buffer, layout)) return;
 
-    uint8_t *bank = layout->banks[1];
+    uint8_t *bank = layout->banks[STARTUP_BANK_BF];
 
     if (!reboot_into_cartridge()) return;
-	__disable_irq();
+    __disable_irq();
 
     uint16_t addr, addr_prev = 0, addr_prev2 = 0;
 
@@ -145,11 +148,11 @@ void emulate_bf_cartridge(const char* filename, uint32_t image_size, uint8_t* bu
 
         if (!(addr & 0x1000)) continue;
 
-        addr &= 0x0fff;
+        uint16_t address = addr & 0x0fff;
 
-        if (addr >= 0x0f80 && addr <= 0x0fbf) bank = layout->banks[addr - 0x0f80];
+        if (address >= 0x0f80 && address <= 0x0fbf) bank = layout->banks[address - 0x0f80];
 
-        DATA_OUT = ((uint16_t)bank[addr])<<8;
+        DATA_OUT = ((uint16_t)bank[address])<<8;
         SET_DATA_MODE_OUT
         // wait for address bus to change
         while (ADDR_IN == addr) ;

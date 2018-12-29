@@ -111,7 +111,7 @@ EXT_TO_CART_TYPE_MAP ext_to_cart_type_map[] = {
 	{"DPC", CART_TYPE_DPC},
 	{"AR", CART_TYPE_AR},
 	{"BF", CART_TYPE_BF},
-	{"BFSC", CART_TYPE_BFSC},
+	{"BFS", CART_TYPE_BFSC},
 	{0,0}
 };
 
@@ -283,14 +283,14 @@ int isProbablyE7(int size, unsigned char *bytes)
 
 int isProbablyBF(int size, unsigned char *bytes)
 {
-	if (size != 256 * 1024) return 0;
+	if (size < 0x0fff) return 0;
 
 	return !memcmp(bytes + 0x0ff8, "BFBF", 4);
 }
 
 int isProbablyBFSC(int size, unsigned char *bytes)
 {
-	if (size != 256 * 1024) return 0;
+	if (size < 0x0fff) return 0;
 
 	return !memcmp(bytes + 0x0ff8, "BFSC", 4);
 }
