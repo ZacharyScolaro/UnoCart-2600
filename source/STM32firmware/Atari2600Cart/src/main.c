@@ -39,6 +39,7 @@
 #include "cartridge_3f.h"
 #include "cartridge_3e.h"
 #include "cartridge_bf.h"
+#include "cartridge_ace.h"
 
 /*************************************************************************
  * Cartridge Definitions
@@ -78,6 +79,7 @@ int tv_mode;
 #define CART_TYPE_AR	22  // Arcadia Supercharger (variable size)
 #define CART_TYPE_BF	23  // BF
 #define CART_TYPE_BFSC	24  // BFSC
+#define CART_TYPE_ACE	23  // ARM Custom Executable
 
 typedef struct {
 	const char *ext;
@@ -112,6 +114,7 @@ EXT_TO_CART_TYPE_MAP ext_to_cart_type_map[] = {
 	{"AR", CART_TYPE_AR},
 	{"BF", CART_TYPE_BF},
 	{"BFS", CART_TYPE_BFSC},
+	{"ACE", CART_TYPE_ACE},
 	{0,0}
 };
 
@@ -436,7 +439,12 @@ int identify_cartridge(char *filename)
 
 	// If we don't already know the type (from the file extension), then we
 	// auto-detect the cart type - largely follows code in Stella's CartDetector.cpp
-	if (image_size == 2*1024)
+
+	if (is_ace_cartridge(bytes_read, buffer))
+	{
+		cart_type = CART_TYPE_ACE;
+	}
+	else if (image_size == 2*1024)
 	{
 		if (isProbablyCV(bytes_read, buffer))
 			cart_type = CART_TYPE_CV;
@@ -1214,14 +1222,19 @@ void emulate_DPC_cartridge()
 	SysTick_Config(SystemCoreClock / 21000);	// 21KHz
 	__disable_irq();	// Disable interrupts
 
+	unsigned char prevRom = 0, prevRom2 = 0;
+	int soundAmplitudeIndex = 0;
 	unsigned char soundAmplitudes[8] = {0x00, 0x04, 0x05, 0x09, 0x06, 0x0a, 0x0b, 0x0f};
 
 	uint16_t addr, addr_prev = 0, data = 0, data_prev = 0;
 	unsigned char *bankPtr = &cart_rom[0], *DpcDisplayPtr = &cart_rom[8*1024];
 
-	unsigned char DpcRandom, DpcTops[8], DpcBottoms[8], DpcFlags[8];
+	unsigned char DpcTops[8], DpcBottoms[8], DpcFlags[8];
 	uint16_t DpcCounters[8];
 	int DpcMusicModes[3], DpcMusicFlags[3];
+
+	// Initialise the DPC's random number generator register (must be non-zero)
+	int DpcRandom = 1;
 
 	// Initialise the DPC registers
 	for(int i = 0; i < 8; ++i)
@@ -1230,8 +1243,6 @@ void emulate_DPC_cartridge()
 	DpcMusicModes[0] = DpcMusicModes[1] = DpcMusicModes[2] = 0;
 	DpcMusicFlags[0] = DpcMusicFlags[1] = DpcMusicFlags[2] = 0;
 
-	// Initialise the DPC's random number generator register (must be non-zero)
-	DpcRandom = 1;
 
 	uint32_t lastSysTick = SysTick->VAL;
 	uint32_t DpcClocks = 0;
@@ -1263,20 +1274,16 @@ void emulate_DPC_cartridge()
 					{
 						if(index < 4)
 						{	// random number read
-							DpcRandom = (DpcRandom << 1) | (~(((DpcRandom >> 7) ^ (DpcRandom >> 5) ^ (DpcRandom >> 4) ^ (DpcRandom >> 3))) & 1);
-							result = DpcRandom;
+							DpcRandom ^= DpcRandom << 3;
+							DpcRandom ^= DpcRandom >> 5;
+							result = (unsigned char)DpcRandom;
 						}
 						else
 						{	// sound
-							unsigned char i = 0;
-							if (DpcMusicModes[0] && DpcMusicFlags[0])
-								i |= 0x01;
-							if (DpcMusicModes[1] && DpcMusicFlags[1])
-								i |= 0x02;
-							if (DpcMusicModes[2] && DpcMusicFlags[2])
-								i |= 0x04;
-
-							result = soundAmplitudes[i];
+							soundAmplitudeIndex = (DpcMusicModes[0] & DpcMusicFlags[0]);
+							soundAmplitudeIndex |=  (DpcMusicModes[1] & DpcMusicFlags[1]);
+							soundAmplitudeIndex |=  (DpcMusicModes[2] & DpcMusicFlags[2]);
+							result = soundAmplitudes[soundAmplitudeIndex];;
 						}
 						break;
 					}
@@ -1342,7 +1349,7 @@ void emulate_DPC_cartridge()
 					{	// DFx counter high
 						DpcCounters[index] = (((uint16_t)(value & 0x07)) << 8) | (DpcCounters[index] & 0xff);
 						if(index >= 5)
-							DpcMusicModes[index - 5] = (value & 0x10);
+							DpcMusicModes[index - 5] = (value & 0x10) ? 0x7 : 0;
 						break;
 					}
 
@@ -1363,12 +1370,14 @@ void emulate_DPC_cartridge()
 				// normal rom access
 				DATA_OUT = ((uint16_t)bankPtr[addr&0xFFF])<<8;
 				SET_DATA_MODE_OUT
+				prevRom2 = prevRom;
+				prevRom = bankPtr[addr&0xFFF];
 				// wait for address bus to change
 				while (ADDR_IN == addr) ;
 				SET_DATA_MODE_IN
 			}
 		}
-		else
+		else if((prevRom2 & 0xec) == 0x84) // Only do this when ZP write since there will be a full cycle available there
 		{	// non cartridge access - e.g. sta wsync
 			while (ADDR_IN == addr) {
 				// should the DPC clock be incremented?
@@ -1378,9 +1387,12 @@ void emulate_DPC_cartridge()
 					DpcClocks++;
 					// update the music flags here, since there isn't enough time when the music register
 					// is being read.
-					DpcMusicFlags[0] = (DpcClocks % (DpcTops[5]+1)) > DpcBottoms[5];
-					DpcMusicFlags[1] = (DpcClocks % (DpcTops[6]+1)) > DpcBottoms[6];
-					DpcMusicFlags[2] = (DpcClocks % (DpcTops[7]+1)) > DpcBottoms[7];
+					DpcMusicFlags[0] = (DpcClocks % (DpcTops[5] + 1))
+							> DpcBottoms[5] ? 1 : 0;
+					DpcMusicFlags[1] = (DpcClocks % (DpcTops[6] + 1))
+							> DpcBottoms[6] ? 2 : 0;
+					DpcMusicFlags[2] = (DpcClocks % (DpcTops[7] + 1))
+							> DpcBottoms[7] ? 4 : 0;
 				}
 				lastSysTick = sysTick;
 			}
@@ -1443,6 +1455,14 @@ void emulate_cartridge(int cart_type)
 		emulate_bf_cartridge(cartridge_image_path, cart_size_bytes, buffer);
 	else if (cart_type == CART_TYPE_BFSC)
 		emulate_bfsc_cartridge(cartridge_image_path, cart_size_bytes, buffer);
+	}
+	else if (cart_type == CART_TYPE_ACE)
+	{
+		if(launch_ace_cartridge(cartridge_image_path, BUFFER_SIZE * 1024, buffer))
+			set_menu_status_msg("GOOD ACE ROM");
+		else
+			set_menu_status_msg("BAD ACE FILE");
+	}
 }
 
 void convertFilenameForCart(unsigned char *dst, char *src)
@@ -1470,6 +1490,7 @@ int readDirectoryForAtari(char *path)
 	}
 	return ret;
 }
+
 int main(void)
 {
 	char curPath[256] = "";
@@ -1493,7 +1514,7 @@ int main(void)
 	set_tv_mode(tv_mode);
 
 	// set up status area
-	set_menu_status_msg("BY R.EDWARDS");
+	set_menu_status_msg("R.EDWARDS  2");
 	set_menu_status_byte(0);
 
 	while (1) {

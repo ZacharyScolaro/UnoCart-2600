@@ -2,8 +2,6 @@
 
 #include "flash.h"
 
-#define RESERVED_FLASH_KB	   64
-
 extern uint8_t _END_OF_FLASH;
 #define FIRST_FREE_BYTE (uint32_t)(&_END_OF_FLASH)
 #define DEVICE_ID_FLASH_SIZE ((uint16_t*)0x1fff7a22)
@@ -82,15 +80,11 @@ static uint8_t sector_id_for_address(uint32_t address) {
 }
 
 static uint32_t lowest_available_flash_address() {
-	uint8_t firmware_size = FIRST_FREE_BYTE - 0x08000000;
-
-	return (RESERVED_FLASH_KB * 1024) > firmware_size ?
-		(0x08000000 + RESERVED_FLASH_KB * 1024) :
-		FIRST_FREE_BYTE;
+	return 0x08000000;
 }
 
 uint32_t available_flash() {
-	return flash_size_bytes() - (RESERVED_FLASH_KB * 1024);
+	return flash_size_bytes();
 }
 
 bool prepare_flash(uint32_t size, flash_context* context) {
@@ -100,7 +94,6 @@ bool prepare_flash(uint32_t size, flash_context* context) {
 	const uint8_t last_sector_id = sector_id_for_address(lowest_available_flash_address() + size);
 
 	if (first_sector_id == 0xff || last_sector_id == 0xff) return false;
-	if (first_sector_id <= sector_id_for_address(lowest_available_flash_address() - 1)) return false;
 
 	FLASH_Unlock();
 	if (FLASH_WaitForLastOperation() != FLASH_COMPLETE) goto error;
