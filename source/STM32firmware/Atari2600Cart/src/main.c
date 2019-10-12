@@ -1455,7 +1455,6 @@ void emulate_cartridge(int cart_type)
 		emulate_bf_cartridge(cartridge_image_path, cart_size_bytes, buffer);
 	else if (cart_type == CART_TYPE_BFSC)
 		emulate_bfsc_cartridge(cartridge_image_path, cart_size_bytes, buffer);
-	}
 	else if (cart_type == CART_TYPE_ACE)
 	{
 		if(launch_ace_cartridge(cartridge_image_path, BUFFER_SIZE * 1024, buffer))
