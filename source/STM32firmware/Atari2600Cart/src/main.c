@@ -40,6 +40,7 @@
 #include "cartridge_3e.h"
 #include "cartridge_bf.h"
 #include "cartridge_ace.h"
+#include "cartridge_pp.h"
 
 /*************************************************************************
  * Cartridge Definitions
@@ -79,7 +80,8 @@ int tv_mode;
 #define CART_TYPE_AR	22  // Arcadia Supercharger (variable size)
 #define CART_TYPE_BF	23  // BF
 #define CART_TYPE_BFSC	24  // BFSC
-#define CART_TYPE_ACE	23  // ARM Custom Executable
+#define CART_TYPE_ACE	25  // ARM Custom Executable
+#define CART_TYPE_PP    26 // Pink Panther Prototype
 
 typedef struct {
 	const char *ext;
@@ -115,6 +117,7 @@ EXT_TO_CART_TYPE_MAP ext_to_cart_type_map[] = {
 	{"BF", CART_TYPE_BF},
 	{"BFS", CART_TYPE_BFSC},
 	{"ACE", CART_TYPE_ACE},
+	{"PP", CART_TYPE_PP},
 	{0,0}
 };
 
@@ -475,8 +478,15 @@ int identify_cartridge(char *filename)
 			cart_type = CART_TYPE_FE;
 		else if (isProbably0840(bytes_read, buffer))
 			cart_type = CART_TYPE_0840;
-		else
+		else if (f8) {
 			cart_type = CART_TYPE_F8;
+		}
+		else {
+			cart_type = CART_TYPE_PP;
+		}
+	}
+	else if (image_size == 8*1024 + 3) {
+		cart_type = CART_TYPE_PP;
 	}
 	else if(image_size >= 10240 && image_size <= 10496)
 	{  // ~10K - Pitfall II
@@ -1462,6 +1472,9 @@ void emulate_cartridge(int cart_type)
 		else
 			set_menu_status_msg("BAD ACE FILE");
 	}
+	else if (cart_type == CART_TYPE_PP) {
+		emulate_pp_cartridge(cart_size_bytes, buffer, buffer + 8*1024);
+	}
 }
 
 void convertFilenameForCart(unsigned char *dst, char *src)
@@ -1513,7 +1526,7 @@ int main(void)
 	set_tv_mode(tv_mode);
 
 	// set up status area
-	set_menu_status_msg("R.EDWARDS  2");
+	set_menu_status_msg("R.EDWARDS  3");
 	set_menu_status_byte(0);
 
 	while (1) {
