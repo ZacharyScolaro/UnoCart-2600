@@ -41,10 +41,22 @@ SOFTWARE.
 
 extern void Reset_Handler();
 
+#ifndef FIRMWARE_SYMBOL_START
+#define FIRMWARE_SYMBOL_START _binary_Debug_AtariCart_bin_start
+#endif
+
+#ifndef FIRMWARE_SYMBOL_END
+#define FIRMWARE_SYMBOL_END _binary_Debug_AtariCart_bin_end
+#endif
+
+#ifndef FIRMWARE_SYMBOL_SIZE
+#define FIRMWARE_SYMBOL_SIZE _binary_Debug_AtariCart_bin_size
+#endif
+
 extern int __file_size;
-extern uint8_t _binary_Debug_AtariCart_bin_end;
-extern int _binary_Debug_AtariCart_bin_size;
-extern uint8_t _binary_Debug_AtariCart_bin_start;
+extern uint8_t FIRMWARE_SYMBOL_END;
+extern int FIRMWARE_SYMBOL_SIZE;
+extern uint8_t FIRMWARE_SYMBOL_START;
 
 extern uint8_t _binary_src_UpgradeComplete_bin_start;
 
@@ -73,12 +85,13 @@ int main(void)
 	__disable_irq(); // Good idea?
     flash_context ctx;
 
-    if (!prepare_flash((int)&_binary_Debug_AtariCart_bin_size, &ctx))
+    if (!prepare_flash((int)&FIRMWARE_SYMBOL_SIZE, &ctx))
     	{
     		return false;
     	}
 
-    if (!write_flash((int)&_binary_Debug_AtariCart_bin_size, (uint8_t *)&_binary_Debug_AtariCart_bin_start, &ctx))
+
+    if (!write_flash((int)&FIRMWARE_SYMBOL_SIZE, (uint8_t *)&FIRMWARE_SYMBOL_START, &ctx))
     {
     	return false;
     }
