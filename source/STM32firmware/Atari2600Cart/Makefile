@@ -38,6 +38,7 @@ SOURCES = \
 	src/cartridge_bf.c \
 	src/cartridge_ace.c \
 	src/cartridge_pp.c \
+	src/cartridge_df.c \
 	src/flash.c \
 	src/main.c
 

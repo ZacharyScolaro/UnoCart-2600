@@ -39,6 +39,7 @@
 #include "cartridge_3f.h"
 #include "cartridge_3e.h"
 #include "cartridge_bf.h"
+#include "cartridge_df.h"
 #include "cartridge_ace.h"
 #include "cartridge_pp.h"
 
@@ -81,7 +82,9 @@ int tv_mode;
 #define CART_TYPE_BF	23  // BF
 #define CART_TYPE_BFSC	24  // BFSC
 #define CART_TYPE_ACE	25  // ARM Custom Executable
-#define CART_TYPE_PP    26 // Pink Panther Prototype
+#define CART_TYPE_PP    26  // Pink Panther Prototype
+#define CART_TYPE_DF    27  // DF
+#define CART_TYPE_DFSC  28  // DFSC
 
 typedef struct {
 	const char *ext;
@@ -117,7 +120,9 @@ EXT_TO_CART_TYPE_MAP ext_to_cart_type_map[] = {
 	{"BF", CART_TYPE_BF},
 	{"BFS", CART_TYPE_BFSC},
 	{"ACE", CART_TYPE_ACE},
-	{"PP", CART_TYPE_PP},
+	{"WD", CART_TYPE_PP},
+	{"DF", CART_TYPE_DF},
+	{"DFS", CART_TYPE_DFSC},
 	{0,0}
 };
 
@@ -287,18 +292,24 @@ int isProbablyE7(int size, unsigned char *bytes)
 	return 0;
 }
 
-int isProbablyBF(int size, unsigned char *bytes)
+int isProbablyBF(unsigned char *tail)
 {
-	if (size < 0x0fff) return 0;
-
-	return !memcmp(bytes + 0x0ff8, "BFBF", 4);
+	return !memcmp(tail + 8, "BFBF", 4);
 }
 
-int isProbablyBFSC(int size, unsigned char *bytes)
+int isProbablyBFSC(unsigned char *tail)
 {
-	if (size < 0x0fff) return 0;
+	return !memcmp(tail + 8, "BFSC", 4);
+}
 
-	return !memcmp(bytes + 0x0ff8, "BFSC", 4);
+int isProbablyDF(unsigned char *tail)
+{
+	return !memcmp(tail + 8, "DFBF", 4);
+}
+
+int isProbablyDFSC(unsigned char *tail)
+{
+	return !memcmp(tail + 8, "DFSC", 4);
 }
 
 /*************************************************************************
@@ -438,6 +449,18 @@ int identify_cartridge(char *filename)
 		goto close;
 	}
 
+	uint8_t tail[16];
+	if (f_lseek(&fil, image_size - 16) != FR_OK) {
+		cart_type = CART_TYPE_NONE;
+		goto close;
+	}
+
+	read_result = f_read(&fil, tail, 16, &bytes_read);
+	if (read_result != FR_OK || 16 != bytes_read) {
+		cart_type = CART_TYPE_NONE;
+		goto close;
+	}
+
 	if (cart_type != CART_TYPE_NONE) goto close;
 
 	// If we don't already know the type (from the file extension), then we
@@ -534,11 +557,17 @@ int identify_cartridge(char *filename)
 		else
 			cart_type = CART_TYPE_F0;
 	}
+	else if (image_size == 128 * 1024) {
+		if (isProbablyDF(tail))
+			cart_type = CART_TYPE_DF;
+		else if (isProbablyDFSC(tail))
+			cart_type = CART_TYPE_DFSC;
+	}
 	else if (image_size == 256 * 1024)
 	{
-		if (isProbablyBF(bytes_read, buffer))
+		if (isProbablyBF(tail))
 			cart_type = CART_TYPE_BF;
-		else if (isProbablyBFSC(bytes_read, buffer))
+		else if (isProbablyBFSC(tail))
 			cart_type = CART_TYPE_BFSC;
 	}
 
@@ -1474,6 +1503,12 @@ void emulate_cartridge(int cart_type)
 	}
 	else if (cart_type == CART_TYPE_PP) {
 		emulate_pp_cartridge(cart_size_bytes, buffer, buffer + 8*1024);
+	}
+	else if (cart_type == CART_TYPE_DF) {
+		emulate_df_cartridge(cartridge_image_path, cart_size_bytes, buffer);
+	}
+	else if (cart_type == CART_TYPE_DFSC) {
+		emulate_dfsc_cartridge(cartridge_image_path, cart_size_bytes, buffer);
 	}
 }
 
