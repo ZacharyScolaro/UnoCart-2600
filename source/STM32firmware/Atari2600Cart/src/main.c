@@ -455,8 +455,9 @@ int identify_cartridge(char *filename)
 		goto close;
 	}
 
-	read_result = f_read(&fil, tail, 16, &bytes_read);
-	if (read_result != FR_OK || 16 != bytes_read) {
+	UINT bytes_read_tail;
+	read_result = f_read(&fil, tail, 16, &bytes_read_tail);
+	if (read_result != FR_OK || 16 != bytes_read_tail) {
 		cart_type = CART_TYPE_NONE;
 		goto close;
 	}
