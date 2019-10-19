@@ -1,8 +1,7 @@
 # Use the official ARM Cortex GNU toolchain
 #     (http//developer.arm.com/open-source/gnu-toolchain/gnu-rm)
-# and the open source stlink tool suite
-#     (https://github.com/texane/stlink)
-# to build and flash the firmware with this Makefile.
+# to build the updater binary with this Makefile. Be sure to build the
+# actual firmware first.
 #
 # Makefile derived from https://github.com/nitsky/stm32-example
 
