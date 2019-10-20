@@ -4,7 +4,7 @@ install:
   - pushd ~
   - mkdir -p toolchain
   - cd toolchain
-  - test ! -f bin/arm-none-eabi-gcc && wget $TOOLCHAIN_URL && tar -xjf *bz2 --strip 1
+  - if test ! -f bin/arm-none-eabi-gcc; then wget $TOOLCHAIN_URL && tar -xjf *bz2 --strip 1; fi
   - popd
   - export PATH=$HOME/toolchain/bin:$PATH
 
