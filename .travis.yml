@@ -1,17 +1,29 @@
 language: c
 install:
-  - export TOOLCHAIN_URL=https://developer.arm.com/-/media/Files/downloads/gnu-rm/8-2019q3/RC1.1/gcc-arm-none-eabi-8-2019-q3-update-linux.tar.bz2
-  - pushd ~
-  - mkdir -p toolchain
-  - cd toolchain
-  - if test ! -f bin/arm-none-eabi-gcc; then wget $TOOLCHAIN_URL && tar -xjf *bz2 --strip 1; fi
-  - popd
-  - export PATH=$HOME/toolchain/bin:$PATH
-
+- export TOOLCHAIN_URL=https://developer.arm.com/-/media/Files/downloads/gnu-rm/8-2019q3/RC1.1/gcc-arm-none-eabi-8-2019-q3-update-linux.tar.bz2
+- pushd ~
+- mkdir -p toolchain
+- cd toolchain
+- if test ! -f bin/arm-none-eabi-gcc; then wget $TOOLCHAIN_URL && tar -xjf *bz2 --strip
+  1; fi
+- popd
+- export PATH=$HOME/toolchain/bin:$PATH
 script:
-  - make -C source/STM32firmware/Atari2600Cart
-  - make -C source/STM32firmware/FirmwareUpdater -f Makefile.gnu
-
+- make -C source/STM32firmware/Atari2600Cart bin hex
+- make -C source/STM32firmware/FirmwareUpdater -f Makefile.gnu bin
 cache:
   directories:
-    - $HOME/toolchain
+  - "$HOME/toolchain"
+deploy:
+  provider: releases
+  api_key: $deploy_key
+  file:
+  - source/STM32firmware/Atari2600Cart/build/firmware.bin
+  - source/STM32firmware/Atari2600Cart/build/firmware.hex
+  - source/STM32firmware/FirmwareUpdater/build/update.bin
+  on:
+    tags: true
+
+env:
+  global:
+    secure: EFsNRUDnbaifwQ7g8LSiiLDGY/gMCwWvDvYICKUv6/pyxzK6EndtCGztuKBat1WWXZUr+SN5OlKddl151/eBRfPl64zTcDe4KGgIh0E/C6AFNfgAI4re7BUQTn4HDW+vszxhl6j4NpOrGBGfN3WrmxJni/nTXbAqDRCcliXFw3nPE29Bl/B3czY9cBAS442AysvtJkwDRWDa4/fAi01hO/AAOPhFR16oQnsX1Z+L2JpV+wCJQihH3HpxQHA36C+57I58yO6nSHG0uHSkykh8VrYZnrzastRQWGGqLvSt1IC6gHLVqgzIVyk0S14O0rv/8UR1PwoMbzfz8mS0/1XTzdDcOZBmJzmAmWjB2gAF7l/IH9VqwD0oafL4kbGGzyy++IAmJtluPPQPFd0QyyPc5uIg6K4mtewVDLglYq7jT/vEwWEKVj/gmFnOFeOYo7UV3llY6RcUVfPvjS1F2BQB6+hAmLogWBvhJJLP/1hM6tl0tykMRX/FUkg0qe5J36sVJCDr7wK36T0IHzzFlsGtJMls0szYMYepf/23o8+ZQ3r7rG4RLyE92sxFRHAvUYt2J9ifvdsjb2JPGHz3ZOilzmvAU12CRhbRm5y5M4mg5GX+YVDcUTQozki7rYnMH6ZQcL9Pjp/xbJZDm+IkP5F0y2dGmLZYvA1Kw4xKPMeHQEY=
