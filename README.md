@@ -1,3 +1,6 @@
+The UnoCart is the work of Robin Edwards (electrotrains on AtariAge). This repository is just the
+current home of the most recent firmware updates.
+
 Head over to the [releases](https://github.com/DirtyHairy/UnoCart-2600/releases) page for firmware updates.
 
 UnoCart-2600
