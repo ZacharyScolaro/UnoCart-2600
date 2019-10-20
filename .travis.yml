@@ -11,3 +11,7 @@ install:
 script:
   - make -C source/STM32firmware/Atari2600Cart
   - make -C source/STM32firmware/FirmwareUpdater -f Makefile.gnu
+
+cache:
+  directories:
+    - $HOME/toolchain
