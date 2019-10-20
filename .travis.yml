@@ -21,6 +21,7 @@ deploy:
   - source/STM32firmware/Atari2600Cart/build/firmware.bin
   - source/STM32firmware/Atari2600Cart/build/firmware.hex
   - source/STM32firmware/FirmwareUpdater/build/update.bin
+  skip_cleanup: true
   on:
     tags: true
 env:
