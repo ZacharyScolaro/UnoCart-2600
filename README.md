@@ -1,4 +1,4 @@
-Head over to the [Releases](https://github.com/DirtyHairy/UnoCart-2600/releases) firmware updates.
+Head over to the [Releases](https://github.com/DirtyHairy/UnoCart-2600/releases) page for firmware updates.
 
 UnoCart-2600
 ============
