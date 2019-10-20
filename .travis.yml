@@ -1,0 +1,13 @@
+language: c
+install:
+  - pushd ~
+  - mkdir toolchain
+  - cd toolchain
+  - wget https://developer.arm.com/-/media/Files/downloads/gnu-rm/8-2019q3/RC1.1/gcc-arm-none-eabi-8-2019-q3-update-linux.tar.bz2
+  - tar -xjf *bz2 --strip 1
+  - popd
+  - export PATH=$HOME/toolchain/bin:$PATH
+
+script:
+  - make -C source/STM32firmware/Atari2600Cart
+  - make -C source/STM32firmware/FirmwareUpdater -f Makefile.gnu
