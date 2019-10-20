@@ -1,10 +1,10 @@
 language: c
 install:
+  - export TOOLCHAIN_URL=https://developer.arm.com/-/media/Files/downloads/gnu-rm/8-2019q3/RC1.1/gcc-arm-none-eabi-8-2019-q3-update-linux.tar.bz2
   - pushd ~
-  - mkdir toolchain
+  - mkdir -p toolchain
   - cd toolchain
-  - wget https://developer.arm.com/-/media/Files/downloads/gnu-rm/8-2019q3/RC1.1/gcc-arm-none-eabi-8-2019-q3-update-linux.tar.bz2
-  - tar -xjf *bz2 --strip 1
+  - test ! -f bin/arm-none-eabi-gcc && wget $TOOLCHAIN_URL && tar -xjf *bz2 --strip 1
   - popd
   - export PATH=$HOME/toolchain/bin:$PATH
 
