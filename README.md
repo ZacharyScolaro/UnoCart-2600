@@ -1,3 +1,5 @@
+Head over to the [Releases](https://github.com/DirtyHairy/UnoCart-2600/releases) firmware updates.
+
 UnoCart-2600
 ============
 The UnoCart-2600 is an open source SD-card multicart for the Atari 2600. Use the joystick or the SELECT/RESET keys
