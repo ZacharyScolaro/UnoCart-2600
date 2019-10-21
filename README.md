@@ -2,6 +2,8 @@ The UnoCart is the work of Robin Edwards (electrotrains on AtariAge). This repos
 
 Head over to the [releases](https://github.com/DirtyHairy/UnoCart-2600/releases) page for firmware updates.
 
+The remainder of this README is straight from the [original repository](https://github.com/robinhedwards/UnoCart-2600).
+
 UnoCart-2600
 ============
 The UnoCart-2600 is an open source SD-card multicart for the Atari 2600. Use the joystick or the SELECT/RESET keys
