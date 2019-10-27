@@ -1,5 +1,9 @@
 # Changelog
 
+## v10
+
+ * Revert some of the autodetection changes; should fix F8 carts that fail to detect.
+
 ## v09
 
  * Support for the Pink Panther Prototype

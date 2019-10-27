@@ -502,11 +502,8 @@ int identify_cartridge(char *filename)
 			cart_type = CART_TYPE_FE;
 		else if (isProbably0840(bytes_read, buffer))
 			cart_type = CART_TYPE_0840;
-		else if (f8) {
-			cart_type = CART_TYPE_F8;
-		}
 		else {
-			cart_type = CART_TYPE_PP;
+			cart_type = CART_TYPE_F8;
 		}
 	}
 	else if (image_size == 8*1024 + 3) {
@@ -1562,7 +1559,7 @@ int main(void)
 	set_tv_mode(tv_mode);
 
 	// set up status area
-	set_menu_status_msg("R.EDWARDS  9");
+	set_menu_status_msg("R.EDWARDS 10");
 	set_menu_status_byte(0);
 
 	while (1) {
