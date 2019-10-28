@@ -40,7 +40,7 @@ MAP = $(BUILDDIR)/update.map
 
 CFLAGS = \
 	-MT $@ -MMD -MP -MF $(DEPDIR)/$*.d \
-	-Os -Wall -g \
+	-O2 -Wall -g \
 	-mcpu=cortex-m4 -mthumb \
 	-mfpu=fpv4-sp-d16 -mfloat-abi=softfp \
 	-DSTM32F4XX \

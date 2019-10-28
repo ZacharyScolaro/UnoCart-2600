@@ -1,5 +1,9 @@
 # Changelog
 
+## v11
+
+ * Increase optimization level to O2 -> supercharger games work again.
+
 ## v10
 
  * Revert some of the autodetection changes; should fix F8 carts that fail to detect.
