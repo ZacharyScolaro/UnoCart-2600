@@ -1538,10 +1538,10 @@ int readDirectoryForAtari(char *path)
 
 int main(void)
 {
-	char curPath[256] = "";
-	int cart_type = CART_TYPE_NONE;
+    uint8_t ram[0x100];
+    uint8_t *bank = (uint8_t *)(0x08010000 + (4096 * 15));
+    uint16_t addr, addr_prev = 0, addr_prev2 = 0, data = 0, data_prev = 0;
 
-	init();
 	/* In/Out: PE{8..15} */
 	config_gpio_data();
 	/* In: PD{0..15} */
@@ -1549,63 +1549,35 @@ int main(void)
 	/* In: Other Cart Input Signals - PC{0..1} */
 	config_gpio_sig();
 
-	if (!(GPIOC->IDR & 0x0001))
-		tv_mode = TV_MODE_PAL60;
-	else if (!(GPIOC->IDR & 0x0002))
-		tv_mode = TV_MODE_PAL;
-	else
-		tv_mode = TV_MODE_NTSC;
+	__disable_irq();
 
-	set_tv_mode(tv_mode);
-
-	// set up status area
-	set_menu_status_msg("R.EDWARDS 11");
-	set_menu_status_byte(0);
-
-	while (1) {
-		int ret = emulate_firmware_cartridge();
-
-		if (ret == CART_CMD_ROOT_DIR)
+	while (1)
+	{
+		while (((addr = ADDR_IN) != addr_prev) || (addr != addr_prev2))
 		{
-			curPath[0] = 0;
-			if (!readDirectoryForAtari(curPath))
-				set_menu_status_msg("CANT READ SD");
+			addr_prev2 = addr_prev;
+			addr_prev = addr;
 		}
-		else
-		{
-			int sel = ret - CART_CMD_SEL_ITEM_n;
-			DIR_ENTRY *d = &dir_entries[sel];
 
-			if (d->isDir)
-			{	// selection is a directory
-				if (!strcmp(d->filename, ".."))
-				{	// go back
-					int len = strlen(curPath);
-					while (len && curPath[--len] != '/');
-					curPath[len] = 0;
-				}
-				else
-				{	// go into director
-					strcat(curPath, "/");
-					strcat(curPath, d->filename);
-				}
+        if (!(addr & 0x1000)) continue;
 
-				if (!readDirectoryForAtari(curPath))
-					set_menu_status_msg("CANT READ SD");
-				Delayms(200);
-			}
-			else
-			{	// selection is a rom file
-				strcpy(cartridge_image_path, curPath);
-				strcat(cartridge_image_path, "/");
-				strcat(cartridge_image_path, d->filename);
-				cart_type = identify_cartridge(cartridge_image_path);
-				Delayms(200);
-				if (cart_type != CART_TYPE_NONE)
-					emulate_cartridge(cart_type);
-				else
-					set_menu_status_msg("BAD ROM FILE");
-			}
-		}
-	}
+        uint16_t address = addr & 0x0fff;
+
+        if (address < 0x80) {
+            while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
+			data = data_prev>>8;
+
+            ram[address] = data;
+        } else {
+            if (address >= 0x0f80 && address <= 0x0fbf) bank = (uint8_t *)(0x08010000 + (4096 * (address - 0x0f80)));
+
+            data = (address < 0x0100) ? ram[address & 0x7f] : bank[address];
+
+            DATA_OUT = ((uint16_t)data)<<8;
+			SET_DATA_MODE_OUT
+			// wait for address bus to change
+			while (ADDR_IN == addr) ;
+			SET_DATA_MODE_IN
+        }
+    }
 }
